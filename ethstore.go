@@ -488,7 +488,19 @@ func Calculate(ctx context.Context, bnAddress, elAddress, dayStr string, concurr
 					totalTxFee.Add(totalTxFee, txFee)
 				}
 
-				baseFeePerGas := new(big.Int).SetBytes(blockData.BaseFeePerGas[:])
+				var baseFeePerGas *big.Int
+				if block.Version == spec.DataVersionDeneb {
+					baseFeePerGas = new(big.Int).SetBytes(blockData.BaseFeePerGas[:])
+				} else {
+					// base fee per gas is stored little-endian but we need it
+					// big-endian for big.Int.
+					var baseFeePerGasBEBytes [32]byte
+					for i := 0; i < 32; i++ {
+						baseFeePerGasBEBytes[i] = blockData.BaseFeePerGas[32-1-i]
+					}
+					baseFeePerGas = new(big.Int).SetBytes(baseFeePerGasBEBytes[:])
+				}
+
 				burntFee := new(big.Int).Mul(baseFeePerGas, new(big.Int).SetUint64(blockData.GasUsed))
 
 				totalTxFee.Sub(totalTxFee, burntFee)
