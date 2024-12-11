@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,7 @@ var consTimeout = time.Second * 120
 var consTimeoutMu = sync.Mutex{}
 var validatorsCache *lru.Cache
 var validatorsCacheMu = sync.Mutex{}
+var masterNodeContract = "0x0000000000000000000000000000000000001002"
 
 type Day struct {
 	Day                  decimal.Decimal `json:"day"`
@@ -542,8 +544,8 @@ func Calculate(ctx context.Context, bnAddress, elAddress, dayStr string, concurr
 			}
 			for _, d := range blockData.Withdrawals {
 				v, exists := validatorsByIndex[d.ValidatorIndex]
-				if !exists {
-					// only calculate for validators that have been active the whole day
+				if !exists || strings.EqualFold(d.Address.String(), masterNodeContract) {
+					// only calculate for validators that have been active the whole day or withdrawn not to MasterNode staking contract
 					continue
 				}
 				v.WithdrawalsSumGwei += d.Amount
